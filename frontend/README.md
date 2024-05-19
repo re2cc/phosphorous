@@ -14,6 +14,7 @@ This will install:
 - Sveltekit (With Svelte 5)
 - Tauri
 - TailwindCSS
+- shadcn-svelte (Need to manually add components)
 
 ## How to use (Development)
 
