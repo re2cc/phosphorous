@@ -4,7 +4,7 @@ API for phosphorus
 
 ## How to install
 
-This project uses Poetry for Python environment management, please install it using pipx according to the [documentation](https://python-poetry.org/docs/#installing-with-pipx)
+This project uses Poetry for Python environment management, please install it using [pipx](https://pipx.pypa.io/stable/installation/) according to the [documentation](https://python-poetry.org/docs/#installing-with-pipx)
 After that, in a terminal (in the backend directory):
 
     > poetry install
