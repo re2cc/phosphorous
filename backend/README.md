@@ -15,7 +15,7 @@ This will create a Poetry environment and install:
 - SQLModel: ORM
 - FastAPI: API framework
 
-## How to use
+## How to use (Development)
 
 In a terminal (in the backend directory):
 
