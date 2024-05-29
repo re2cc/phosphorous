@@ -1,23 +1,11 @@
-# phosphorous-frontend
+This is a Kotlin Multiplatform project targeting Android, Desktop.
 
-Frontend for phosphorous
+* `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
+  It contains several subfolders:
+  - `commonMain` is for code that’s common for all targets.
+  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
+    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
+    `iosMain` would be the right folder for such calls.
 
-## How to install
 
-This project requires [Rust](https://www.rust-lang.org/es/tools/install) and [Node.js](https://nodejs.org/en/download/package-manager) (with [pnpm](https://pnpm.io/es/installation) strongly recommended), you can install them either using their documentation or with a package manager ([Scoop](https://scoop.sh/) recommended if using Windows)
-After that, in a terminal (in the frontend directory):
-
-    > pnpm install
-
-This will install:
-
-- Sveltekit (With Svelte 5)
-- Tauri
-- TailwindCSS
-- shadcn-svelte (Need to manually add components)
-
-## How to use (Development)
-
-in a terminal (in the frontend directory):
-
-    > pnpm tauri dev
+Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
