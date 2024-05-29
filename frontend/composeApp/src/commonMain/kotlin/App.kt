@@ -1,5 +1,4 @@
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,43 +11,58 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.painterResource
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.transitions.SlideTransition
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-import phosphorous.composeapp.generated.resources.Res
-import phosphorous.composeapp.generated.resources.compose_multiplatform
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
+        Navigator(screen = AuthScreen()) {
+            navigator -> SlideTransition(navigator)
+        }
+    }
+}
+
+class AuthScreen():Screen {
+    @Composable
+    @Preview
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+
+
         var usename: String by remember { mutableStateOf("") }
         var password: String by remember { mutableStateOf("") }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
                 value = usename,
-                onValueChange = {usename = it}
+                onValueChange = { usename = it }
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
                 value = password,
-                onValueChange = {password = it}
+                onValueChange = { password = it }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            AnimatedVisibility(usename.isNotEmpty() && password.isNotEmpty()){
-                Button(onClick = {  }) {
+            AnimatedVisibility(usename.isNotEmpty() && password.isNotEmpty()) {
+                Button(onClick = { navigator.push(ConfigScreen()) }) {
                     Text("Login")
                 }
             }
-
-            /*AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
-            }*/
         }
     }
+}
+
+class ConfigScreen():Screen {
+    @Composable
+    @Preview
+    override fun Content() {
+        Text("Hi")
+    }
+
 }
