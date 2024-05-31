@@ -8,7 +8,7 @@ class User (SQLModel,table=True):
     password: str
     icon: Optional[int]
 
-    messages:list ["Message"] = Relationship(back_populates="user")
+    messages: list["Message"] = Relationship(back_populates="user")
 
 class Message (SQLModel,table=True):
     id: int|None = Field(default=None, primary_key=True)
