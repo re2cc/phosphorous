@@ -4,6 +4,7 @@ from chatController import ChatController
 
 from sqlmodel import Session, select
 from passlib.context import CryptContext
+from sqlalchemy.exc import NoResultFound
 
 from loguru import logger
 import logging
@@ -137,12 +138,28 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 
 def createUser(username: str, password: str):
-    password = get_password_hash(password)
-    with Session(engine) as session:
-        user = User(username=username, password=password)
-        session.add(user)
-        session.commit()
-        message = Message(sender="system", content="Answer shortly", order=0, user_id=user.id)
-        session.add(message)
-        session.commit()
+    try:
+        userByUsername(username)
+    except NoResultFound:
+        password = get_password_hash(password)
+        with Session(engine) as session:
+            user = User(username=username, password=password)
+            session.add(user)
+            session.commit()
+            message = Message(sender="system", content="Answer shortly", order=0, user_id=user.id)
+            session.add(message)
+            session.commit()
+            return
+    raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Alredy used username",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
+def editPrompt(user_id: int, order: int, message: str):
+    with Session(engine) as session:
+        statement = select(Message).where(Message.user_id == user_id).where(Message.order == order)
+        result = session.exec(statement).one()
+        result.content = message
+        session.add(result)
+        session.commit()

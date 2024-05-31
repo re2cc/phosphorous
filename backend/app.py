@@ -58,6 +58,14 @@ async def registerUser(
 ):
     createUser(username, password)
 
+    
+@app.post("/chat/sys")
+async def changeSysPmt(
+    current_user: Annotated[UserNonRecursive, Depends(get_current_user)],
+    message: str
+):
+    editPrompt(current_user.id, 0, message)
+
 @app.get("/chat/number/")
 async def nmessages(
     current_user: Annotated[UserNonRecursive, Depends(get_current_user)],

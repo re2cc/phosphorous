@@ -80,6 +80,8 @@ class AuthScreen():Screen {
 
         var username: String by remember { mutableStateOf("") }
         var password: String by remember { mutableStateOf("") }
+        var status: String by remember { mutableStateOf("") }
+
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
@@ -114,9 +116,12 @@ class AuthScreen():Screen {
                                 }
                             }
 
-                            val jwt: TokenResponseAPI = response.body()
-
-                            navigator.push(ChatScreen(jwt.access_token))
+                            if (response.status == HttpStatusCode.OK) {
+                                val jwt: TokenResponseAPI = response.body()
+                                navigator.push(ChatScreen(jwt.access_token))
+                            } else {
+                                status = "Login : ${response.status.description}"
+                            }
                         }
                     }
                 }) {
@@ -138,23 +143,33 @@ class AuthScreen():Screen {
                                     append(HttpHeaders.Accept, "application/json")
                                 }
                             }
-                            username = ""
-                            password = ""
+                            if (response.status != HttpStatusCode.OK) {
+                                status = "Register: ${response.status.description}"
+                            } else {
+                                status = "Success"
+                                username = ""
+                                password = ""
+                            }
                         }
                     }
                 }) {
                     Text("Register")
                 }
             }
+            AnimatedVisibility(status != "") {
+                Text(status)
+            }
         }
     }
 }
 
-class ChatScreen(private val jwt: String):Screen {
+class ChatScreen(private val jwt: String, ):Screen {
 
     @Composable
     @Preview
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+
         var msg: String by remember { mutableStateOf("") }
         val stateStack = rememberStateStack<String>()
         var user: UserAPI? by remember { mutableStateOf(null) }
@@ -173,7 +188,6 @@ class ChatScreen(private val jwt: String):Screen {
                         }
                     }
                     user = response.body()
-                    println(user)
                 }
             }
         }
@@ -207,9 +221,9 @@ class ChatScreen(private val jwt: String):Screen {
                         }
                         message = response.body()
                         if (message?.sender == "user") {
-                            stateStack.push("${user?.username}: ${message?.content}")
+                            stateStack.push("${user?.username}: \"${message?.content}\"")
                         } else {
-                            stateStack.push("${message?.sender}: ${message?.content}")
+                            stateStack.push("${message?.sender}: \"${message?.content}\"")
                         }
                     }
                 }
@@ -254,7 +268,7 @@ class ChatScreen(private val jwt: String):Screen {
                 modifier = Modifier.weight(.1f)
             ) {
                 ActionButton(text = "Send") {
-                    stateStack.push("${user?.username}: ${msg}")
+                    stateStack.push("${user?.username}: \"${msg}\"")
                     runBlocking {
                         launch {
                             val param = parameters { append("message", msg) }.formUrlEncode()
@@ -271,6 +285,76 @@ class ChatScreen(private val jwt: String):Screen {
                         }
                     }
                     msg = ""
+                }
+                ActionButton(text = "Settings") {
+                    stateStack.popAll()
+                    navigator.push(SettingsScreen(jwt))
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun RowScope.ActionButton(
+        text: String,
+        enabled: Boolean = true,
+        onClick: () -> Unit
+    ) {
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier
+                .weight(.1f)
+                .padding(8.dp)
+        ) {
+            Text(text = text)
+        }
+    }
+}
+
+
+class SettingsScreen(private val jwt: String, ):Screen {
+    @Composable
+    @Preview
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+
+        var systemPrompt: String by remember { mutableStateOf("") }
+
+        Column {
+            Row(
+                modifier = Modifier.weight(.1f)
+            ) {
+                TextField(
+                    value = systemPrompt,
+                    onValueChange = { systemPrompt = it },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Row(
+                modifier = Modifier.weight(.1f)
+            ) {
+                ActionButton(text = "Change system prompt") {
+                    runBlocking {
+                        launch {
+                            val param = parameters { append("message", systemPrompt) }.formUrlEncode()
+                            client.post(
+                                urlString = "http://127.0.0.1:8000/chat/sys?$param"
+                            ) {
+                                headers {
+                                    append(HttpHeaders.Accept, "application/json")
+                                    append(HttpHeaders.Authorization, "Bearer $jwt")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.weight(.1f)
+            ) {
+                ActionButton(text = "Back") {
+                    navigator.pop()
                 }
             }
         }
