@@ -134,3 +134,15 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     if user is None:
         raise credentials_exception
     return user
+
+
+def createUser(username: str, password: str):
+    password = get_password_hash(password)
+    with Session(engine) as session:
+        user = User(username=username, password=password)
+        session.add(user)
+        session.commit()
+        message = Message(sender="system", content="Answer shortly", order=0, user_id=user.id)
+        session.add(message)
+        session.commit()
+

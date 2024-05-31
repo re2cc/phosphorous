@@ -32,14 +32,35 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.transitions.SlideTransition
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.call.body
+import io.ktor.client.call.receive
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.client.plugins.auth.providers.bearer
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.forms.submitForm
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-val client = HttpClient(OkHttp)
+
+
+val client = HttpClient(OkHttp) {
+    install(ContentNegotiation) {
+        json(Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        })
+    }
+}
 
 @Composable
 @Preview
@@ -75,12 +96,54 @@ class AuthScreen():Screen {
                 Button(onClick = {
                     runBlocking {
                         launch {
-                            val jwt: String = client.request("https://ktor.io/").bodyAsText()
-                            navigator.push(ChatScreen(jwt))
+                            val response: HttpResponse = client.submitForm (
+                                url = "http://127.0.0.1:8000/token",
+                                formParameters = Parameters.build {
+                                    append("grant_type", "")
+                                    append("username", username)
+                                    append("password", password)
+                                    append("scope", "")
+                                    append("client_id", "")
+                                    append("client_secret", "")
+                                },
+                                encodeInQuery = false
+                            ) {
+                                headers {
+                                    append(HttpHeaders.Accept, "application/json")
+                                    append(HttpHeaders.ContentType, "application/x-www-form-urlencoded")
+                                }
+                            }
+
+                            val jwt: TokenResponseAPI = response.body()
+
+                            navigator.push(ChatScreen(jwt.access_token))
                         }
                     }
                 }) {
                     Text("Login")
+                }
+            }
+            AnimatedVisibility(username.isNotEmpty() && password.isNotEmpty()) {
+                Button(onClick = {
+                    runBlocking {
+                        launch {
+                            val param = parameters {
+                                append("username", username)
+                                append("password", password)
+                            }.formUrlEncode()
+                            val response = client.post(
+                                urlString = "http://127.0.0.1:8000/user/register?$param"
+                            )  {
+                                headers {
+                                    append(HttpHeaders.Accept, "application/json")
+                                }
+                            }
+                            username = ""
+                            password = ""
+                        }
+                    }
+                }) {
+                    Text("Register")
                 }
             }
         }
@@ -88,15 +151,71 @@ class AuthScreen():Screen {
 }
 
 class ChatScreen(private val jwt: String):Screen {
-    private val randomValue: String
-        get() = "a"
 
     @Composable
     @Preview
     override fun Content() {
         var msg: String by remember { mutableStateOf("") }
         val stateStack = rememberStateStack<String>()
-        val (selectedItem, selectItem) = rememberSaveable { mutableStateOf("") }
+        var user: UserAPI? by remember { mutableStateOf(null) }
+        var nmessages: Int? by remember { mutableStateOf(null) }
+        var message: MessageAPI? by remember { mutableStateOf(null) }
+
+        if (user == null){
+            runBlocking {
+                launch {
+                    val response = client.get(
+                        urlString = "http://127.0.0.1:8000/user"
+                    ) {
+                        headers {
+                            append(HttpHeaders.Accept, "application/json")
+                            append(HttpHeaders.Authorization, "Bearer $jwt")
+                        }
+                    }
+                    user = response.body()
+                    println(user)
+                }
+            }
+        }
+        if (nmessages == null && user != null) {
+            runBlocking {
+                launch {
+                    val response = client.get(
+                        urlString = "http://127.0.0.1:8000/chat/number"
+                    ) {
+                        headers {
+                            append(HttpHeaders.Accept, "application/json")
+                            append(HttpHeaders.Authorization, "Bearer $jwt")
+                        }
+                    }
+                    nmessages = response.body()
+                }
+            }
+        }
+
+        if (nmessages != null && user != null) {
+            for (i in 0 until nmessages!!) {
+                runBlocking {
+                    launch {
+                        val response = client.get(
+                            urlString = "http://127.0.0.1:8000/chat/message/$i"
+                        ) {
+                            headers {
+                                append(HttpHeaders.Accept, "application/json")
+                                append(HttpHeaders.Authorization, "Bearer $jwt")
+                            }
+                        }
+                        message = response.body()
+                        if (message?.sender == "user") {
+                            stateStack.push("${user?.username}: ${message?.content}")
+                        } else {
+                            stateStack.push("${message?.sender}: ${message?.content}")
+                        }
+                    }
+                }
+            }
+            nmessages = -1 // Halt
+        }
 
         Column {
             LazyColumn(
@@ -135,8 +254,23 @@ class ChatScreen(private val jwt: String):Screen {
                 modifier = Modifier.weight(.1f)
             ) {
                 ActionButton(text = "Send") {
-                    stateStack.push(msg)
-                    println(stateStack)
+                    stateStack.push("${user?.username}: ${msg}")
+                    runBlocking {
+                        launch {
+                            val param = parameters { append("message", msg) }.formUrlEncode()
+                            val response = client.get(
+                                urlString = "http://127.0.0.1:8000/chat/send?$param"
+                            ) {
+                                headers {
+                                    append(HttpHeaders.Accept, "application/json")
+                                    append(HttpHeaders.Authorization, "Bearer $jwt")
+                                }
+                            }
+                            val tmpmsg: String = response.body()
+                            stateStack.push("assistant: $tmpmsg")
+                        }
+                    }
+                    msg = ""
                 }
             }
         }
@@ -159,3 +293,12 @@ class ChatScreen(private val jwt: String):Screen {
         }
     }
 }
+
+@Serializable
+data class TokenResponseAPI(val access_token: String, val token_type: String)
+
+@Serializable
+data class UserAPI(val id: Int, val username: String)
+
+@Serializable
+data class MessageAPI(val sender: String, val content: String, val order: Int)

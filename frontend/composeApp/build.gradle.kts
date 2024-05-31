@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.serialization)
 }
 
 kotlin {
@@ -37,6 +38,13 @@ kotlin {
             implementation(libs.voyager.transitions)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.ktor.client.json)
+            implementation(libs.ktor.client.serialization)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx)
+            implementation(libs.ktor.client.auth)
+            implementation(libs.kotlinx.serialization.json)
+
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

@@ -51,6 +51,13 @@ async def read_users_me(
 ):
     return current_user
 
+@app.post("/user/register")
+async def registerUser(
+    username: str,
+    password: str
+):
+    createUser(username, password)
+
 @app.get("/chat/number/")
 async def nmessages(
     current_user: Annotated[UserNonRecursive, Depends(get_current_user)],
@@ -64,7 +71,7 @@ async def nmessage(
 ):
     return messageByNumber(current_user.id, n_message)
 
-@app.get("/chat/messages/send")
+@app.get("/chat/send")
 async def smessage(
     current_user: Annotated[UserNonRecursive, Depends(get_current_user)],
     message: str
